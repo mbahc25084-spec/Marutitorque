@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 600">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0" stop-color="#173047" />
+      <stop offset="1" stop-color="#061625" />
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#g)" />
+  <g transform="translate(80,160) scale(1.2)" fill="#0ea5b7">
+    <rect x="0" y="160" width="1100" height="140" rx="36" fill="#0b2030" opacity="0.7"/>
+    <path d="M80 160c40-60 120-60 220-60s180 0 260 28 200 44 320 16 200-64 280-16v120H80z" fill="#083244" opacity="0.65" />
+    <circle cx="220" cy="300" r="34" fill="#0c1730" />
+    <circle cx="220" cy="300" r="13" fill="#dfe9ff" />
+    <circle cx="720" cy="300" r="34" fill="#0c1730" />
+    <circle cx="720" cy="300" r="13" fill="#dfe9ff" />
+  </g>
+  <text x="70" y="80" fill="#dfe9ff" font-family="Inter, Arial" font-size="48">MarutiTorque — Hero backdrop</text>
+</svg>
