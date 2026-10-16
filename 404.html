@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Redirecting to MarutiTorque</title>
+    <meta http-equiv="refresh" content="0; url=/Marutitorque/" />
+    <script>
+      (function () {
+        const target = '/Marutitorque/';
+        if (window.location.pathname.indexOf('/Marutitorque') === 0) {
+          window.location.replace(target);
+        } else {
+          window.location.replace(target);
+        }
+      }());
+    </script>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #07111c;
+        color: #eaf2ff;
+        font-family: Arial, sans-serif;
+      }
+      .box {
+        text-align: center;
+        padding: 24px;
+      }
+      a { color: #7dd3fc; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <h1>Redirecting…</h1>
+      <p>If you are not redirected, <a href="/Marutitorque/">open the MarutiTorque homepage</a>.</p>
+    </div>
+  </body>
+</html>
