@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="MarutiTorque mark">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1">
+      <stop offset="0" stop-color="#EAF2FF"/>
+      <stop offset="1" stop-color="#DCE8FF"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="116" height="116" rx="24" fill="url(#bg)"/>
+  <path d="M22 82c0-17.7 14.3-32 32-32h16c17.7 0 32 14.3 32 32v8H22v-8Z" fill="#0C1730"/>
+  <path d="M34 79h56c5.5 0 10-4.5 10-10v-7.5c0-5.5-4.5-10-10-10H34c-5.5 0-10 4.5-10 10V69c0 5.5 4.5 10 10 10Z" fill="#DCE8FF"/>
+  <path d="M28 92h72c6 0 11 5 11 11v4H17v-4c0-6 5-11 11-11Z" fill="#0C1730"/>
+  <circle cx="42" cy="92" r="10" fill="#0C1730"/>
+  <circle cx="42" cy="92" r="3.6" fill="#DCE8FF"/>
+  <circle cx="80" cy="92" r="10" fill="#0C1730"/>
+  <circle cx="80" cy="92" r="3.6" fill="#DCE8FF"/>
+</svg>
