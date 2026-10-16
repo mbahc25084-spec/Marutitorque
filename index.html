@@ -887,6 +887,11 @@ ol.demo li strong { color: var(--text); }
 .drawer .tbl-stack td .chip, .drawer .tbl-stack td .status { white-space: normal; }
 @media (max-width: 720px) { .drawer .kpis-3 { grid-template-columns: minmax(0, 1fr); } }
 
+.photo { position: relative; }
+.ph-credit { position: absolute; right: 8px; bottom: 8px; max-width: min(70%, 420px); padding: 3px 8px; border-radius: 4px; background: rgba(8, 12, 28, .72); color: #E8ECFA; font-size: 11px; line-height: 1.35; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; z-index: 3; pointer-events: auto; }
+.is-placeholder > .ph-credit, .ph-credit[hidden] { display: none; }
+.tbl td small { overflow-wrap: anywhere; }
+
 </style>
 </head>
 <body data-route="customer">
@@ -1545,8 +1550,9 @@ function photo(key, opts = {}) {
   const a = ASSETS[key]; if (!a) throw new Error('unknown asset ' + key);
   const img = h('img', { src: ASSET_DIR + a.path, alt: opts.alt || a.label, decoding: 'async', loading: opts.eager ? 'eager' : 'lazy', draggable: 'false' });
   const badge = h('figcaption.ph-badge', ic('image'), h('span', 'Placeholder. ' + (a.kind === 'cutout' ? 'Side-profile' : 'Official') + ' image not supplied'));
-  const fig = h('figure.photo.photo-' + a.kind + (opts.cls ? '.' + opts.cls.split(' ').join('.') : ''), img, badge);
-  const apply = () => { const ph = judgeLoaded(key, img); fig.classList.toggle('is-placeholder', ph); if (ph) img.alt = (opts.alt || a.label) + ' (placeholder: file not supplied)'; };
+  const credit = h('figcaption.ph-credit', { hidden: true });
+  const fig = h('figure.photo.photo-' + a.kind + (opts.cls ? '.' + opts.cls.split(' ').join('.') : ''), { 'data-asset': key }, img, badge, credit);
+  const apply = () => { const ph = judgeLoaded(key, img); fig.classList.toggle('is-placeholder', ph); if (ph) img.alt = (opts.alt || a.label) + ' (placeholder: file not supplied)'; paintCredits(); };
   img.addEventListener('load', apply);
   img.addEventListener('error', () => { if (img.src !== FALLBACK_SVG) { img.src = FALLBACK_SVG; setAssetState(key, 'missing'); fig.classList.add('is-placeholder'); } });
   if (img.complete && img.naturalWidth) apply();
@@ -1576,6 +1582,29 @@ function probeAssets() {
   });
 }
 const modelImgKey = id => id + ':hero';
+
+/* ---------- picture credits ----------
+ * Open-licence photos (for example Creative Commons from Wikimedia Commons) must be credited next to the picture.
+ * assets/credits.json maps an asset path to its credit line, e.g. {"vehicles/brezza-hero.jpg": "Photo: Name, CC BY-SA 4.0, via Wikimedia Commons"}.
+ * The picture packager writes this file. A missing or unreadable file simply means no credits. */
+const CREDITS = {};
+function creditFor(a) { const c = CREDITS[a.path]; return typeof c === 'string' ? c : ''; }
+function paintCredits() {
+  document.querySelectorAll('figure.photo[data-asset]').forEach(fig => {
+    const a = ASSETS[fig.dataset.asset], cap = fig.querySelector('.ph-credit'); if (!a || !cap) return;
+    const c = fig.classList.contains('is-placeholder') ? '' : creditFor(a);
+    cap.textContent = c; cap.title = c; cap.hidden = !c;
+  });
+}
+function loadCredits() {
+  try {
+    fetch(ASSET_DIR + 'credits.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {}).then(j => {
+      if (!j || typeof j !== 'object' || Array.isArray(j)) return;
+      Object.keys(j).forEach(k => { if (typeof j[k] === 'string' && j[k].trim()) CREDITS[k] = j[k].trim().slice(0, 240); });
+      paintCredits(); document.dispatchEvent(new CustomEvent('creditsloaded'));
+    }).catch(() => {});
+  } catch (e) { /* no credits available */ }
+}
 
 /* ---- 03-data.js ---- */
 /* =====================================================================================================
@@ -4518,8 +4547,15 @@ function openAbout() {
     sec('ab-test', 'Self-test', selfTestPanel()),
     sec('ab-demo', 'A five-minute walkthrough', h('ol.demo', DEMO_STEPS.map(([who, what, href]) => h('li', h('strong', who + '. '), what, ' ', h('a', { href, onClick: () => { const l = layers(); if (l) l.replaceChildren(); document.body.classList.remove('no-scroll'); } }, 'Go there'))))),
     sec('ab-store', 'Where your changes live', h('p', 'Changes are saved only in this browser, so they survive a refresh but never reach another device or a server. “Reset demo” in the header restores the original records and the audited assumptions.')),
-    sec('ab-credit', 'Credits', h('p', 'Icons: Lucide (ISC licence). Type: Archivo (SIL Open Font Licence 1.1). Charts are drawn in the page; there are no analytics, trackers or network requests.')));
+    sec('ab-credit', 'Credits', h('p', 'Icons: Lucide (ISC licence). Type: Archivo (SIL Open Font Licence 1.1). Charts are drawn in the page; there are no analytics or trackers, and the page loads only its own files.'), creditsList()));
   return openDrawer({ title: 'About and labels', subtitle: 'What is real, what is simulated, and how to check the numbers', body, wide: true });
+}
+
+/* ---------- picture credits (only shown when assets/credits.json lists any) ---------- */
+function creditsList() {
+  const rows = Object.values(ASSETS).filter(a => creditFor(a) && assetState[a.key] === 'supplied');
+  if (!rows.length) return null;
+  return h('div', h('h4', 'Picture credits'), h('ul.legend-list', rows.map(a => h('li', h('strong', a.label + ': '), creditFor(a)))));
 }
 
 /* ---------- Brand assets ---------- */
@@ -4531,15 +4567,15 @@ function openBrandAssets() {
     host.replaceChildren(
       h('div.kpis.kpis-3', kpi({ label: 'Supplied files', value: fInt(count('supplied')), sub: 'of ' + list.length + ' slots', def: 'Slots where the file in the assets folder is not the shipped placeholder.', src: 'computed' }), kpi({ label: 'Placeholders in use', value: fInt(count('placeholder')), sub: 'clearly badged on screen', def: 'Slots still showing the labelled local placeholder.', src: 'computed', tone: count('placeholder') ? 'warn' : null }), kpi({ label: 'Missing or checking', value: fInt(count('missing') + count('pending')), def: 'Slots where no file loaded. The page shows a safe fallback, never a broken image.', src: 'computed', tone: count('missing') ? 'bad' : null })),
       h('div.tbl-wrap', h('table.tbl.tbl-stack', h('thead', h('tr', ['Slot', 'Where it appears', 'File to supply', 'Format', 'Status'].map(c => h('th', { scope: 'col' }, c)))),
-        h('tbody', list.map(a => { const w = ASSET_WORD[assetState[a.key]] || ASSET_WORD.pending; return h('tr', h('th', { scope: 'row', 'data-label': 'Slot' }, a.label), h('td', { 'data-label': 'Where' }, a.where), h('td', { 'data-label': 'File' }, h('code', ASSET_DIR + a.path)), h('td', { 'data-label': 'Format' }, a.spec), h('td', { 'data-label': 'Status' }, statusChip(w[0], w[1]))); })))));
+        h('tbody', list.map(a => { const w = ASSET_WORD[assetState[a.key]] || ASSET_WORD.pending; return h('tr', h('th', { scope: 'row', 'data-label': 'Slot' }, a.label), h('td', { 'data-label': 'Where' }, a.where), h('td', { 'data-label': 'File' }, h('code', ASSET_DIR + a.path), creditFor(a) ? h('small', 'Credit: ' + creditFor(a)) : null), h('td', { 'data-label': 'Format' }, a.spec), h('td', { 'data-label': 'Status' }, statusChip(w[0], w[1]))); })))));
   };
   paint();
   const onState = () => paint();
-  document.addEventListener('assetstate', onState);
+  document.addEventListener('assetstate', onState); document.addEventListener('creditsloaded', onState);
   const names = list.map(a => ASSET_DIR + a.path).join('\n');
   const copy = h('button.btn.btn-sm', { type: 'button', onClick: () => { try { navigator.clipboard.writeText(names).then(() => toast('Filename list copied.'), () => toast('Copy was blocked. Select the table text instead.')); } catch (e) { toast('Copy was blocked. Select the table text instead.'); } } }, ic('copy'), 'Copy the filename list');
   probeAssets();
-  return openDrawer({ title: 'Brand assets', subtitle: 'Which logo and photo files are real and which are placeholders', wide: true, onClose: () => document.removeEventListener('assetstate', onState),
+  return openDrawer({ title: 'Brand assets', subtitle: 'Which logo and photo files are real and which are placeholders', wide: true, onClose: () => { document.removeEventListener('assetstate', onState); document.removeEventListener('creditsloaded', onState); },
     body: h('div.about',
       h('section.ab-sec', h('h3', 'Why the official logo and photos are not included'),
         h('p', 'This prototype ships without the Maruti Suzuki logo, the ARENA and NEXA marks, or manufacturer photographs. The owner’s Terms of Use do not allow extracting or re-using site content without written consent, so every picture slot holds a clearly badged local placeholder instead. Nothing is hot-linked, and nothing breaks if a file is missing.'),
@@ -4589,7 +4625,7 @@ function buildShell() {
   $('#foot').replaceChildren(h('div.wrap',
     h('div', h('p', h('strong', 'Not affiliated with or endorsed by Maruti Suzuki India Limited.'), ' Maruti Suzuki, ARENA and NEXA are trademarks of their owners. This is an independent student prototype made for the Xcelerate 2026 case competition (Team Torque 9, B-Track). All customers, outlets, appointments and results shown are simulated.'),
       h('p', { style: { marginTop: '8px' } }, 'No official logo or vehicle photograph is bundled: the owner’s Terms of Use do not allow re-use without written consent. Slots for permitted images are listed under Brand assets.')),
-    h('p', 'Build: single static page, no network calls. Audited model v5, reference tests 102/102.')));
+    h('p', 'Build: single static page that loads only its own files. Audited model v5, reference tests 102/102.')));
 }
 function updateNav(view) {
   $$('.nav a').forEach(a => { if (a.dataset.view === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
@@ -4610,7 +4646,7 @@ function renderRoute() {
   lastView = r.view; announce(ROUTES[r.view].label + ' view');
 }
 function start() {
-  initTips(); store.load(); buildShell(); probeAssets();
+  initTips(); store.load(); buildShell(); probeAssets(); loadCredits();
   const topEl = document.querySelector('.top');
   if (topEl) { const setTop = () => document.documentElement.style.setProperty('--top-h', topEl.offsetHeight + 'px'); setTop(); if (typeof ResizeObserver === 'function') new ResizeObserver(setTop).observe(topEl); else addEventListener('resize', setTop); }
   addEventListener('hashchange', renderRoute);

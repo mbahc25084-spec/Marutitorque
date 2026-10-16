@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Picture packager</title>
+<meta name="description" content="Assign each of your pictures to a vehicle or screen, then download a folder that drops into the Proof Engine repository. Runs only in your browser.">
+<style>
+:root {
+  --bg: #F3F5FB; --surface: #FFFFFF; --surface-2: #EEF1F9; --line: #D5DAE8; --text: #101A3A; --text-2: #4A5578;
+  --accent: #5B3FD9; --accent-ink: #FFFFFF; --ok: #0B7A4B; --ok-bg: #E4F5EC; --warn: #8A5200; --warn-bg: #FFF0D1; --bad: #B3261E; --bad-bg: #FDE8E6; --navy: #0B1228;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0B1228; --surface: #131C3B; --surface-2: #1A2549; --line: #2B3866; --text: #EEF1FF; --text-2: #AAB4D6; --accent: #8E78FF; --accent-ink: #0B1228; --ok: #5ED39B; --ok-bg: #10382A; --warn: #F2C26B; --warn-bg: #3A2C0E; --bad: #FF8E86; --bad-bg: #40191A; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+header { background: var(--navy); color: #EEF1FF; padding: 22px 16px; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+header .wrap { padding: 0; }
+h1 { margin: 0 0 4px; font-size: clamp(1.4rem, 3vw, 1.9rem); line-height: 1.2; }
+header p { margin: 0; color: #B9C2E4; max-width: 70ch; }
+main { padding: 20px 0 56px; display: grid; gap: 18px; }
+section { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+h2 { margin: 0 0 6px; font-size: 1.15rem; }
+.hint { color: var(--text-2); margin: 0 0 12px; max-width: 75ch; }
+.note { display: flex; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--warn-bg); color: var(--warn); font-size: .95rem; }
+.note strong { color: inherit; }
+.btn { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; padding: 10px 16px; border-radius: 10px; cursor: pointer; min-height: 44px; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+:focus-visible { outline: 3px solid #22D3EE; outline-offset: 2px; }
+.drop { border: 2px dashed var(--line); border-radius: 12px; padding: 26px 16px; text-align: center; background: var(--surface-2); }
+.drop.over { border-color: var(--accent); background: var(--surface); }
+.drop p { margin: 0 0 12px; color: var(--text-2); }
+input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+ul.cards { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; }
+.card { display: grid; grid-template-columns: 128px minmax(0, 1fr) minmax(200px, 280px); gap: 14px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--surface); }
+.card.has-problem { border-color: var(--bad); }
+.thumb { width: 128px; height: 72px; border-radius: 6px; background: var(--surface-2) repeating-conic-gradient(rgba(128,140,180,.18) 0% 25%, transparent 0% 50%) 0 0 / 14px 14px; display: grid; place-items: center; overflow: hidden; }
+.thumb img { max-width: 100%; max-height: 100%; display: block; }
+.meta { min-width: 0; }
+.fname { font-weight: 650; overflow-wrap: anywhere; }
+.sub { color: var(--text-2); font-size: .88rem; }
+.msg { font-size: .88rem; margin-top: 4px; }
+.msg.warn { color: var(--warn); } .msg.bad { color: var(--bad); }
+label.sel { display: grid; gap: 4px; font-size: .85rem; font-weight: 650; color: var(--text-2); }
+select { font: inherit; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); min-height: 44px; width: 100%; }
+.card .rm { justify-self: start; }
+@media (max-width: 720px) { .card { grid-template-columns: 96px minmax(0, 1fr); } .card .thumb { width: 96px; height: 54px; } .card .pick { grid-column: 1 / -1; } }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { background: var(--surface-2); font-size: .85rem; color: var(--text-2); }
+tr:last-child td { border-bottom: 0; }
+code { font: .85rem ui-monospace, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
+.pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: .8rem; font-weight: 650; }
+.pill.ok { background: var(--ok-bg); color: var(--ok); } .pill.keep { background: var(--surface-2); color: var(--text-2); }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 14px; }
+.check { display: flex; gap: 10px; align-items: flex-start; max-width: 70ch; }
+.check input { width: 22px; height: 22px; margin-top: 2px; flex: none; }
+#status { min-height: 1.5em; margin-top: 10px; font-weight: 600; }
+#status.bad { color: var(--bad); } #status.ok { color: var(--ok); }
+label.cred { margin-top: 8px; } label.cred input { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); min-height: 40px; width: 100%; font-weight: 400; }
+.check.also { margin-top: 8px; font-size: .9rem; } .check.also input { width: 18px; height: 18px; }
+ol.steps { margin: 10px 0 0; padding-left: 22px; display: grid; gap: 4px; }
+.empty { color: var(--text-2); padding: 8px 0 0; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Picture packager</h1>
+    <p>Assign each picture to a vehicle or screen, and get a folder that drops straight into the Proof Engine repository. It runs only in this browser tab. Nothing is uploaded anywhere.</p>
+  </div>
+</header>
+<main class="wrap">
+  <div class="note" role="note"><span><strong>Use only pictures you have permission to use.</strong> The Maruti Suzuki website's terms do not allow copying its logos or photographs without written consent. Good sources are an organiser media kit, a written permission from Maruti Suzuki, or your own photographs. This tool does not download anything from the web.</span></div>
+
+  <section aria-labelledby="h-add">
+    <h2 id="h-add">1. Add your pictures</h2>
+    <p class="hint">Choose as many JPG, PNG or WebP files as you like. The tool guesses the vehicle from the file name (for example <code>brezza-side.png</code> or <code>Grand Vitara front.jpg</code>). You can change any guess in step 2.</p>
+    <div class="drop" id="drop">
+      <p>Drag pictures here, or choose them from your computer.</p>
+      <label class="btn primary" for="file" id="pickbtn" tabindex="0">Choose pictures</label>
+      <input type="file" id="file" accept="image/jpeg,image/png,image/webp" multiple>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-assign">
+    <h2 id="h-assign">2. Say what each picture is</h2>
+    <p class="hint">Pick the vehicle and view for every file. Each place in the app can take one picture. Files marked "Skip" are left out.</p>
+    <ul class="cards" id="cards"></ul>
+    <p class="empty" id="cards-empty">No pictures added yet.</p>
+  </section>
+
+  <section aria-labelledby="h-out">
+    <h2 id="h-out">3. Check and download</h2>
+    <p class="hint">Pictures are resized to the sizes the app expects. Places you leave empty keep their labelled placeholder. If you typed credit lines, they are saved in a small credits file that the app shows next to each picture. Upload everything in one go, because a new credits file replaces the old one.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col">Place in the app</th><th scope="col">File it will become</th><th scope="col">Your picture</th><th scope="col">Result</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+    <div class="bar">
+      <label class="check"><input type="checkbox" id="perm"><span>I have permission to use these pictures in this prototype.</span></label>
+      <button class="btn primary" id="go" type="button" disabled>Download assets-to-upload.zip</button>
+    </div>
+    <p id="status" role="status" aria-live="polite"></p>
+    <ol class="steps">
+      <li>Unzip the file. You get a folder named <code>assets</code>.</li>
+      <li>On GitHub, open your repository, choose <strong>Add file</strong>, then <strong>Upload files</strong>.</li>
+      <li>Drag the <code>assets</code> folder in and choose <strong>Commit changes</strong>. Pictures with the same names replace the placeholders; nothing else is touched.</li>
+      <li>After a minute, refresh the page. Open <strong>Brand assets</strong> in the app to see which slots now show your files.</li>
+    </ol>
+  </section>
+</main>
+
+<script>
+'use strict';
+/* ---- the 19 places the app reads pictures from (exact paths the app expects) ---- */
+const MODELS = [['brezza', 'Brezza'], ['victoris', 'Victoris'], ['fronx', 'Fronx'], ['grandvitara', 'Grand Vitara'], ['evitara', 'e Vitara'], ['jimny', 'Jimny']];
+const SLOTS = [
+  { key: 'logo-msil', group: 'Brand logos', label: 'Maruti Suzuki logo', path: 'brand/maruti-suzuki-logo.png', kind: 'logo' },
+  { key: 'logo-arena', group: 'Brand logos', label: 'ARENA logo', path: 'brand/arena-logo.png', kind: 'logo' },
+  { key: 'logo-nexa', group: 'Brand logos', label: 'NEXA logo', path: 'brand/nexa-logo.png', kind: 'logo' },
+  { key: 'scene-home', group: 'Scene photographs', label: 'Landing screen photograph', path: 'context/home-hero.jpg', kind: 'photo' },
+  { key: 'scene-drive', group: 'Scene photographs', label: 'Proof Drive photograph', path: 'context/proof-drive.jpg', kind: 'photo' },
+  { key: 'scene-arrival', group: 'Scene photographs', label: 'Delivery and arrival photograph', path: 'context/arrival-moment.jpg', kind: 'photo' },
+  { key: 'scene-own', group: 'Scene photographs', label: 'Ownership photograph', path: 'context/ownership.jpg', kind: 'photo' }
+];
+MODELS.forEach(([id, name]) => {
+  SLOTS.push({ key: id + '-hero', group: name, label: name + ': front three-quarter photograph', path: 'vehicles/' + id + '-hero.jpg', kind: 'photo', model: id });
+  SLOTS.push({ key: id + '-side', group: name, label: name + ': side-profile picture', path: 'vehicles/' + id + '-side.png', kind: 'side', model: id });
+});
+const SLOT = Object.fromEntries(SLOTS.map(s => [s.key, s]));
+/* sizes are one pixel off the placeholder sizes (1601x901, 1601x721, 701x141) on purpose: the app uses an exact match to spot placeholders */
+const OUT = { photo: [1600, 900], side: [1600, 720], logoMaxW: 700 };
+
+const state = { items: [] }; let nextId = 1;
+const $ = s => document.querySelector(s);
+const el = (tag, attrs, ...kids) => { const n = document.createElement(tag); for (const [k, v] of Object.entries(attrs || {})) { if (k === 'class') n.className = v; else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else if (v !== false && v != null) n.setAttribute(k, v === true ? '' : v); } kids.flat().forEach(c => n.append(c instanceof Node ? c : document.createTextNode(String(c)))); return n; };
+
+/* ---- guess the slot from the file name ---- */
+function guess(name) {
+  const n = name.toLowerCase().replace(/\.[a-z0-9]+$/, '').replace(/[^a-z0-9]/g, '');
+  if (/arena/.test(n) && /logo|mark|identity/.test(n)) return 'logo-arena';
+  if (/nexa/.test(n) && /logo|mark|identity/.test(n)) return 'logo-nexa';
+  if (/(maruti|suzuki|msil)/.test(n) && /logo|mark/.test(n)) return 'logo-msil';
+  let model = null;
+  if (/grandvitara/.test(n)) model = 'grandvitara'; else if (/evitara/.test(n)) model = 'evitara'; else if (/brezza/.test(n)) model = 'brezza'; else if (/victoris/.test(n)) model = 'victoris'; else if (/fronx/.test(n)) model = 'fronx'; else if (/jimny/.test(n)) model = 'jimny';
+  if (model) return model + (/side|profile|cutout|silhouette/.test(n) ? '-side' : '-hero');
+  if (/home|landing/.test(n)) return 'scene-home';
+  if (/proofdrive|testdrive/.test(n)) return 'scene-drive';
+  if (/arrival|delivery/.test(n)) return 'scene-arrival';
+  if (/ownership|upgrade|service/.test(n)) return 'scene-own';
+  return '';
+}
+
+/* ---- add files ---- */
+function addFiles(list) {
+  [...list].forEach(f => {
+    if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { state.items.push({ id: nextId++, file: f, url: '', w: 0, h: 0, slot: 'skip', error: 'This file type is not supported. Use JPG, PNG or WebP.', credit: '', alsoSide: false }); return; }
+    const it = { id: nextId++, file: f, url: URL.createObjectURL(f), w: 0, h: 0, slot: guess(f.name), error: '', credit: '', alsoSide: false };
+    state.items.push(it);
+    const img = new Image();
+    img.onload = () => { it.w = img.naturalWidth; it.h = img.naturalHeight; it.img = img; render(); };
+    img.onerror = () => { it.error = 'This picture could not be read. Save it as JPG or PNG and add it again.'; it.slot = 'skip'; render(); };
+    img.src = it.url;
+  });
+  render();
+}
+
+/* ---- validation ---- */
+function analyse() {
+  /* assign: every place that will receive a picture. A front photo can also feed its model's side-view place. */
+  const assign = [];
+  state.items.forEach(it => {
+    if (it.error || !it.slot || it.slot === 'skip') return;
+    assign.push({ slot: it.slot, it, derived: false });
+    if (it.alsoSide && /-hero$/.test(it.slot)) assign.push({ slot: it.slot.replace(/-hero$/, '-side'), it, derived: true });
+  });
+  const used = {}; assign.forEach(a => (used[a.slot] = used[a.slot] || []).push(a));
+  const dups = Object.keys(used).filter(k => used[k].length > 1);
+  const unset = state.items.filter(it => !it.error && it.slot === '');
+  const ready = assign.filter(a => a.it.w);
+  return { assign, used, dups, unset, ready };
+}
+
+function warningFor(it) {
+  if (!it.w || !it.slot || it.slot === 'skip') return '';
+  const s = SLOT[it.slot]; if (!s) return '';
+  const min = s.kind === 'logo' ? (it.slot === 'logo-msil' ? 600 : 400) : s.kind === 'side' ? 1200 : 1600;
+  if (it.w < min) return 'This picture is ' + it.w + ' px wide. About ' + min + ' px is better, so it may look soft.';
+  if (s.kind === 'side' && it.file.type !== 'image/png') return 'A side-profile picture looks best as a PNG with a transparent background. Yours will show on a plain backdrop.';
+  return '';
+}
+
+/* ---- render ---- */
+function slotSelect(it) {
+  const sel = el('select', { id: 'sel' + it.id, 'aria-label': 'What is ' + it.file.name + '?', onchange: e => { it.slot = e.target.value; render(); } });
+  sel.append(el('option', { value: '' }, 'Choose where this goes…'), el('option', { value: 'skip' }, 'Skip this file'));
+  const groups = [...new Set(SLOTS.map(s => s.group))];
+  groups.forEach(g => { const og = el('optgroup', { label: g }); SLOTS.filter(s => s.group === g).forEach(s => og.append(el('option', { value: s.key }, s.model ? (s.kind === 'side' ? 'Side-profile picture' : 'Front three-quarter photograph') : s.label))); sel.append(og); });
+  sel.value = it.slot; return sel;
+}
+function render() {
+  const { used, dups, unset, ready } = analyse();
+  const cards = $('#cards'); cards.replaceChildren();
+  state.items.forEach(it => {
+    const dup = (it.slot && used[it.slot] && used[it.slot].length > 1) || (it.alsoSide && /-hero$/.test(it.slot) && (used[it.slot.replace(/-hero$/, '-side')] || []).length > 1);
+    const w = warningFor(it);
+    const meta = el('div', { class: 'meta' }, el('div', { class: 'fname' }, it.file.name), el('div', { class: 'sub' }, it.w ? it.w + ' × ' + it.h + ' px · ' + Math.round(it.file.size / 1024) + ' KB' : (it.error ? '' : 'Reading…')));
+    if (it.error) meta.append(el('div', { class: 'msg bad' }, it.error));
+    else if (dup) meta.append(el('div', { class: 'msg bad' }, 'Another file is already assigned to this place. Change or skip one of them.'));
+    else if (it.slot === '') meta.append(el('div', { class: 'msg warn' }, 'Choose where this picture goes, or skip it.'));
+    else if (w) meta.append(el('div', { class: 'msg warn' }, w));
+    if (!it.error) {
+      meta.append(el('label', { class: 'sel cred' }, 'Credit line (needed for Creative Commons photos, leave empty for your own)', el('input', { type: 'text', value: it.credit, maxlength: '200', placeholder: 'Photo: Author name, CC BY-SA 4.0, via Wikimedia Commons', oninput: e => { it.credit = e.target.value; } })));
+      if (/-hero$/.test(it.slot || '')) meta.append(el('label', { class: 'check also' }, el('input', { type: 'checkbox', checked: it.alsoSide, onchange: e => { it.alsoSide = e.target.checked; render(); } }), el('span', null, 'Also use this picture for the side-view place')));
+    }
+    const thumb = el('div', { class: 'thumb' }, it.url ? el('img', { src: it.url, alt: 'Preview of ' + it.file.name }) : '');
+    const pick = el('div', { class: 'pick' }, el('label', { class: 'sel', for: 'sel' + it.id }, 'Use for', slotSelect(it)), el('button', { class: 'btn rm', type: 'button', onclick: () => { if (it.url) URL.revokeObjectURL(it.url); state.items = state.items.filter(x => x !== it); render(); } }, 'Remove'));
+    pick.lastChild.style.marginTop = '8px';
+    if (it.error) pick.querySelector('select').disabled = true;
+    cards.append(el('li', { class: 'card' + ((dup || it.error) ? ' has-problem' : '') }, thumb, meta, pick));
+  });
+  $('#cards-empty').hidden = state.items.length > 0;
+
+  const rows = $('#rows'); rows.replaceChildren();
+  SLOTS.forEach(s => {
+    const a0 = (used[s.key] || [])[0], src = a0 && a0.it; const conflict = (used[s.key] || []).length > 1;
+    rows.append(el('tr', null, el('td', null, s.label), el('td', null, el('code', null, 'assets/' + s.path)), el('td', null, src ? src.file.name + (a0.derived ? ' (same picture as the front photo)' : '') : '—'), el('td', null, el('span', { class: 'pill ' + (src && !conflict ? 'ok' : 'keep') }, conflict ? 'Conflict' : (src ? 'Replaces placeholder' : 'Keeps placeholder')))));
+  });
+  const problems = dups.length || unset.length;
+  const pending = state.items.some(i => !i.error && !i.w);
+  const perm = $('#perm').checked;
+  $('#go').disabled = !(ready.length && !problems && !pending && perm);
+  const st = $('#status');
+  if (!state.items.length) { st.textContent = ''; st.className = ''; }
+  else if (dups.length) { st.textContent = 'Fix the places that have two pictures before downloading.'; st.className = 'bad'; }
+  else if (unset.length) { st.textContent = unset.length + ' picture(s) still need a place. Choose one or skip them.'; st.className = 'bad'; }
+  else if (!ready.length) { st.textContent = 'No pictures are assigned yet.'; st.className = ''; }
+  else if (!perm) { st.textContent = ready.length + ' of ' + SLOTS.length + ' places ready. Tick the permission box to enable the download.'; st.className = ''; }
+  else { st.textContent = ready.length + ' of ' + SLOTS.length + ' places ready to download.'; st.className = 'ok'; }
+}
+
+/* ---- image processing ---- */
+function canvasFor(it, s) {
+  const img = it.img, sw = img.naturalWidth, sh = img.naturalHeight; let cw, ch, type;
+  if (s.kind === 'photo') { [cw, ch] = OUT.photo; type = 'image/jpeg'; }
+  else if (s.kind === 'side') { [cw, ch] = OUT.side; type = 'image/png'; }
+  else { cw = Math.min(sw, OUT.logoMaxW); ch = Math.round(sh * cw / sw); if (cw === 701 && ch === 141) cw = 700; type = 'image/png'; }
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch; const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+  if (s.kind === 'photo') { g.fillStyle = '#000'; g.fillRect(0, 0, cw, ch); const k = Math.max(cw / sw, ch / sh), dw = sw * k, dh = sh * k; g.drawImage(img, (cw - dw) / 2, (ch - dh) / 2, dw, dh); }
+  else if (s.kind === 'side') { const k = Math.min(cw / sw, ch / sh), dw = sw * k, dh = sh * k; g.drawImage(img, (cw - dw) / 2, (ch - dh) / 2, dw, dh); }
+  else g.drawImage(img, 0, 0, cw, ch);
+  return { c, type };
+}
+const toBytes = (c, type) => new Promise((res, rej) => c.toBlob(b => b ? b.arrayBuffer().then(a => res(new Uint8Array(a))) : rej(new Error('Could not encode picture')), type, 0.9));
+
+/* ---- minimal zip writer (stored, no compression) ---- */
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function makeZip(files) {
+  const enc = new TextEncoder(), d = new Date();
+  const time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  const parts = [], central = []; let offset = 0;
+  files.forEach(f => {
+    const name = enc.encode(f.name), crc = crc32(f.data), h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0, true); h.setUint16(8, 0, true); h.setUint16(10, time, true); h.setUint16(12, date, true);
+    h.setUint32(14, crc, true); h.setUint32(18, f.data.length, true); h.setUint32(22, f.data.length, true); h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+    parts.push(new Uint8Array(h.buffer), name, f.data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0, true); c.setUint16(10, 0, true); c.setUint16(12, time, true); c.setUint16(14, date, true);
+    c.setUint32(16, crc, true); c.setUint32(20, f.data.length, true); c.setUint32(24, f.data.length, true); c.setUint16(28, name.length, true); c.setUint16(30, 0, true); c.setUint16(32, 0, true); c.setUint16(34, 0, true); c.setUint16(36, 0, true); c.setUint32(38, 0, true); c.setUint32(42, offset, true);
+    central.push(new Uint8Array(c.buffer), name);
+    offset += 30 + name.length + f.data.length;
+  });
+  const cdSize = central.reduce((n, p) => n + p.length, 0), e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(4, 0, true); e.setUint16(6, 0, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cdSize, true); e.setUint32(16, offset, true); e.setUint16(20, 0, true);
+  return new Blob([...parts, ...central, new Uint8Array(e.buffer)], { type: 'application/zip' });
+}
+
+async function download() {
+  const { ready } = analyse(), st = $('#status'); $('#go').disabled = true; st.className = ''; st.textContent = 'Preparing ' + ready.length + ' pictures…';
+  try {
+    const files = [];
+    const credits = {};
+    for (const a of ready) { const s = SLOT[a.slot], { c, type } = canvasFor(a.it, s); files.push({ name: 'assets/' + s.path, data: await toBytes(c, type) }); if (a.it.credit.trim()) credits[s.path] = a.it.credit.trim().slice(0, 240); }
+    /* credits.json is only written when at least one credit was typed, so a plain upload never wipes earlier credits */
+    if (Object.keys(credits).length) files.push({ name: 'assets/credits.json', data: new TextEncoder().encode(JSON.stringify(credits, null, 1)) });
+    const blob = makeZip(files), a = el('a', { href: URL.createObjectURL(blob), download: 'assets-to-upload.zip' });
+    document.body.append(a); a.click(); a.remove();
+    st.textContent = 'Downloaded assets-to-upload.zip with ' + ready.length + ' picture(s)' + (files.length > ready.length ? ' and a credits file' : '') + '. Follow the four steps below.'; st.className = 'ok';
+  } catch (err) { st.textContent = 'Something went wrong while preparing the pictures: ' + (err && err.message || err); st.className = 'bad'; }
+  $('#go').disabled = false;
+}
+
+/* ---- wiring ---- */
+const drop = $('#drop');
+$('#file').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
+$('#pickbtn').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('#file').click(); } });
+['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+$('#perm').addEventListener('change', render);
+$('#go').addEventListener('click', download);
+render();
+</script>
+</body>
+</html>
